@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6e40c9;
+            --primary-hover: #5d33b0;
+            --primary-glow: rgba(110, 64, 201, 0.4);
+            --text-primary: #e6e6e6;
+            --text-secondary: #a1a1a9;
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --border-color: #2a2a4a;
+            --user-bubble: #2d3748;
+            --bot-bubble: #4a3a78;
+            --funky-accent: #ff6b6b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 10% 20%, var(--primary-glow) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, var(--primary-glow) 0%, transparent 20%);
+            background-attachment: fixed;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+            backdrop-filter: blur(4px);
+        }
+
+        .chat-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--bg-secondary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--funky-accent), var(--primary));
+            animation: headerGlow 3s linear infinite;
+            background-size: 200% 100%;
+        }
+
+        @keyframes headerGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .chat-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, var(--primary), var(--funky-accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message {
+            display: flex;
+            gap: 1rem;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+
+        .avatar:hover {
+            transform: scale(1.1) rotate(10deg);
+        }
+
+        .user-avatar {
+            background-color: var(--user-bubble);
+            color: var(--funky-accent);
+            box-shadow: 0 0 0 2px var(--funky-accent);
+        }
+
+        .bot-avatar {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .message-content {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            border-radius: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-message .message-content {
+            background-color: var(--user-bubble);
+            border-top-left-radius: 0;
+        }
+
+        .assistant-message .message-content {
+            background-color: var(--bot-bubble);
+            border-top-right-radius: 0;
+        }
+
+        .message-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+        }
+
+        .message-content p {
+            margin-bottom: 1em;
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-content code {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 0.2em 0.4em;
+            border-radius: 0.3em;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .message-content pre {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 0.5em 0;
+        }
+
+        .input-container {
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+            position: relative;
+        }
+
+        .input-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, var(--primary), var(--funky-accent), var(--primary));
+        }
+
+        .input-box {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .input-textarea {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.75rem 3.5rem 0.75rem 1rem;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            min-height: 60px;
+            max-height: 200px;
+            outline: none;
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .input-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .send-button {
+            position: absolute;
+            right: 0.75rem;
+            bottom: 0.75rem;
+            background: linear-gradient(135deg, var(--primary), var(--funky-accent));
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .send-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(110, 64, 201, 0.5);
+        }
+
+        .send-button:disabled {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-secondary);
+            border-radius: 50%;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+            background-color: var(--funky-accent);
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+            background-color: var(--primary);
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+            background-color: var(--funky-accent);
+        }
+
+        @keyframes typingAnimation {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .api-key-container {
+            padding: 0.75rem 1rem;
+            background-color: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .api-key-container::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, var(--funky-accent), var(--primary), var(--funky-accent));
+        }
+
+        .api-key-input {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .api-key-input input {
+            flex: 1;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            font-family: inherit;
+            outline: none;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .api-key-input input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .api-key-input button {
+            padding: 0.5rem 1.25rem;
+            background: linear-gradient(135deg, var(--primary), var(--funky-accent));
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .api-key-input button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .clear-chat-button {
+            position: fixed;
+            bottom: 1rem;
+            left: 1rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .clear-chat-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .message {
+                gap: 0.75rem;
+            }
+            
+            .avatar {
+                width: 32px;
+                height: 32px;
+            }
+
+            .clear-chat-button {
+                bottom: 5.5rem;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .clear-chat-button:hover {
+                transform: translateX(-50%) translateY(-2px);
+            }
+        }
+
+        /* Funky animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .funky-float {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(110, 64, 201, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(110, 64, 201, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(110, 64, 201, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="api-key-container">
+            <div class="api-key-input">
+                <input type="password" id="api-key-input" placeholder="Enter your OpenRouter API key" value="">
+                <button id="save-api-key">Save Key</button>
+            </div>
+        </div>
+        <div class="chat-header">
+            <div class="chat-title">DeepSeek Chat v3</div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Messages will be added here dynamically -->
+        </div>
+        <div class="input-container">
+            <div class="input-box">
+                <textarea class="input-textarea" id="message-input" placeholder="Message DeepSeek Chat..." rows="1"></textarea>
+                <button class="send-button" id="send-button" disabled>
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <button class="clear-chat-button" id="clear-chat-button">
+        <i class="fas fa-trash-alt"></i> Clear Chat
+    </button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const chatMessages = document.getElementById('chat-messages');
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+            const apiKeyInput = document.getElementById('api-key-input');
+            const saveApiKeyButton = document.getElementById('save-api-key');
+            const clearChatButton = document.getElementById('clear-chat-button');
+
+            // Check if API key is saved in localStorage
+            const savedApiKey = localStorage.getItem('openRouterApiKey');
+            if (savedApiKey) {
+                apiKeyInput.value = savedApiKey;
+            }
+
+            // Load conversation history from localStorage
+            loadConversation();
+
+            // Auto-resize textarea
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                
+                // Enable/disable send button based on input
+                sendButton.disabled = this.value.trim() === '';
+            });
+
+            // Handle Enter key press (Shift+Enter for new line)
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sendButton.disabled) {
+                        sendMessage();
+                    }
+                }
+            });
+
+            // Send button click handler
+            sendButton.addEventListener('click', sendMessage);
+
+            // Save API key button click handler
+            saveApiKeyButton.addEventListener('click', function() {
+                const apiKey = apiKeyInput.value.trim();
+                if (apiKey) {
+                    localStorage.setItem('openRouterApiKey', apiKey);
+                    showTemporaryMessage('API key saved successfully!', 'success');
+                } else {
+                    showTemporaryMessage('Please enter a valid API key', 'error');
+                }
+            });
+
+            // Clear chat button click handler
+            clearChatButton.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear the chat history?')) {
+                    localStorage.removeItem('chatHistory');
+                    chatMessages.innerHTML = '';
+                    // Add initial greeting
+                    if (getConversationHistory().length === 0) {
+                        addMessage('assistant', 'Hello! I\'m DeepSeek Chat. How can I assist you today?');
+                    }
+                    showTemporaryMessage('Chat history cleared', 'success');
+                }
+            });
+
+            // Function to show temporary message
+            function showTemporaryMessage(message, type) {
+                const tempMsg = document.createElement('div');
+                tempMsg.textContent = message;
+                tempMsg.style.position = 'fixed';
+                tempMsg.style.bottom = '1rem';
+                tempMsg.style.right = '1rem';
+                tempMsg.style.padding = '0.75rem 1.5rem';
+                tempMsg.style.borderRadius = '0.5rem';
+                tempMsg.style.backgroundColor = type === 'success' ? '#4BB543' : '#FF3333';
+                tempMsg.style.color = 'white';
+                tempMsg.style.zIndex = '1000';
+                tempMsg.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+                tempMsg.style.animation = 'fadeIn 0.3s ease-out';
+                document.body.appendChild(tempMsg);
+                
+                setTimeout(() => {
+                    tempMsg.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => tempMsg.remove(), 300);
+                }, 3000);
+            }
+
+            // Function to send message to DeepSeek Chat
+            async function sendMessage() {
+                const userMessage = messageInput.value.trim();
+                if (!userMessage) return;
+
+                // Get API key
+                const apiKey = localStorage.getItem('openRouterApiKey');
+                if (!apiKey) {
+                    showTemporaryMessage('Please enter your OpenRouter API key first', 'error');
+                    apiKeyInput.focus();
+                    return;
+                }
+
+                // Add user message to chat
+                addMessage('user', userMessage);
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+                sendButton.disabled = true;
+
+                // Save conversation to localStorage
+                saveConversation();
+
+                // Show typing indicator
+                const typingIndicatorId = showTypingIndicator();
+
+                try {
+                    // Call OpenRouter API
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`,
+                            'HTTP-Referer': window.location.href,
+                            'X-Title': 'DeepSeek Chat Web App'
+                        },
+                        body: JSON.stringify({
+                            model: 'deepseek/deepseek-chat-v3-0324:free',
+                            messages: getConversationHistory(),
+                            temperature: 0.7,
+                            max_tokens: 2048
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const botMessage = data.choices[0].message.content;
+
+                    // Remove typing indicator and add bot message
+                    removeTypingIndicator(typingIndicatorId);
+                    addMessage('assistant', botMessage);
+                    
+                    // Save conversation to localStorage
+                    saveConversation();
+                } catch (error) {
+                    console.error('Error:', error);
+                    removeTypingIndicator(typingIndicatorId);
+                    addMessage('assistant', `Sorry, I encountered an error: ${error.message}`);
+                    saveConversation();
+                }
+            }
+
+            // Function to add a message to the chat
+            function addMessage(role, content) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}-message`;
+                messageDiv.dataset.role = role;
+                messageDiv.dataset.timestamp = new Date().toISOString();
+
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = `avatar ${role === 'user' ? 'user-avatar' : 'bot-avatar'}`;
+                
+                const avatarIcon = document.createElement('i');
+                avatarIcon.className = role === 'user' ? 'fas fa-user' : 'fas fa-robot';
+                avatarDiv.appendChild(avatarIcon);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                
+                // Simple markdown parsing for bold and code blocks
+                let formattedContent = content
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/`([^`]+)`/g, '<code>$1</code>')
+                    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+                
+                contentDiv.innerHTML = formattedContent;
+
+                messageDiv.appendChild(avatarDiv);
+                messageDiv.appendChild(contentDiv);
+
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Function to show typing indicator
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'message';
+                typingDiv.id = 'typing-indicator';
+
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'avatar bot-avatar';
+                const avatarIcon = document.createElement('i');
+                avatarIcon.className = 'fas fa-robot';
+                avatarDiv.appendChild(avatarIcon);
+
+                const typingContent = document.createElement('div');
+                typingContent.className = 'message-content';
+                
+                const typingDots = document.createElement('div');
+                typingDots.className = 'typing-indicator';
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'typing-dot';
+                    typingDots.appendChild(dot);
+                }
+                
+                typingContent.appendChild(typingDots);
+                typingDiv.appendChild(avatarDiv);
+                typingDiv.appendChild(typingContent);
+                chatMessages.appendChild(typingDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                return 'typing-indicator';
+            }
+
+            // Function to remove typing indicator
+            function removeTypingIndicator(id) {
+                const typingIndicator = document.getElementById(id);
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+
+            // Function to get conversation history
+            function getConversationHistory() {
+                const messages = [];
+                const messageElements = chatMessages.querySelectorAll('.message:not(#typing-indicator)');
+                
+                messageElements.forEach(element => {
+                    const role = element.dataset.role;
+                    const content = element.querySelector('.message-content').textContent;
+                    messages.push({ role, content });
+                });
+
+                return messages;
+            }
+
+            // Function to save conversation to localStorage
+            function saveConversation() {
+                const messages = [];
+                const messageElements = chatMessages.querySelectorAll('.message:not(#typing-indicator)');
+                
+                messageElements.forEach(element => {
+                    messages.push({
+                        role: element.dataset.role,
+                        content: element.querySelector('.message-content').textContent,
+                        timestamp: element.dataset.timestamp
+                    });
+                });
+
+                localStorage.setItem('chatHistory', JSON.stringify(messages));
+            }
+
+            // Function to load conversation from localStorage
+            function loadConversation() {
+                const savedChat = localStorage.getItem('chatHistory');
+                if (savedChat) {
+                    const messages = JSON.parse(savedChat);
+                    messages.forEach(msg => {
+                        addMessage(msg.role, msg.content);
+                    });
+                } else {
+                    // Initial greeting if no history exists
+                    if (getConversationHistory().length === 0) {
+                        addMessage('assistant', 'Hello! I\'m DeepSeek Chat. How can I assist you today?');
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
