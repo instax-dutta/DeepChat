@@ -90,6 +90,24 @@
             letter-spacing: 0.5px;
         }
 
+        .github-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--funky-accent));
+            color: white;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .github-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -528,6 +546,50 @@
                 padding: 1.5rem;
             }
         }
+
+        .app-footer {
+            text-align: center;
+            padding: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: auto;
+        }
+
+        .app-footer a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .app-footer a:hover {
+            color: var(--funky-accent);
+            text-decoration: underline;
+        }
+
+        .github-fixed-button {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .github-fixed-button {
+                top: auto;
+                bottom: 1rem;
+                right: 1rem;
+            }
+            
+            .clear-chat-button {
+                bottom: 4.5rem;
+                left: 1rem;
+                transform: none;
+            }
+            
+            .clear-chat-button:hover {
+                transform: translateY(-2px);
+            }
+        }
     </style>
 </head>
 <body>
@@ -772,11 +834,34 @@
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'message-content';
                 
-                // Simple markdown parsing for bold and code blocks
+                // Enhanced markdown parsing
                 let formattedContent = content
+                    // Headers
+                    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                    // Bold and italic
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    // Code blocks
                     .replace(/`([^`]+)`/g, '<code>$1</code>')
-                    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+                    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+                    // Lists
+                    .replace(/^\s*\*\s(.*$)/gm, '<li>$1</li>')
+                    .replace(/^\s*-\s(.*$)/gm, '<li>$1</li>')
+                    .replace(/^\s*\+\s(.*$)/gm, '<li>$1</li>')
+                    .replace(/^\s*\d+\.\s(.*$)/gm, '<li>$1</li>')
+                    // Blockquotes
+                    .replace(/^\>\s(.*$)/gm, '<blockquote>$1</blockquote>')
+                    // Links
+                    .replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+                    // Images
+                    .replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;">');
+
+                // Wrap list items in ul/ol if needed
+                if (formattedContent.includes('<li>')) {
+                    formattedContent = formattedContent.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
+                }
                 
                 contentDiv.innerHTML = formattedContent;
 
@@ -874,5 +959,17 @@
             }
         });
     </script>
+
+    <!-- GitHub Button -->
+    <div class="github-fixed-button">
+        <a class="github-button" href="https://github.com/instax-dutta/DeepChat" data-color-scheme="no-preference: dark_high_contrast; light: light_high_contrast; dark: dark_high_contrast;" data-size="large" data-show-count="true" aria-label="Star instax-dutta/DeepChat on GitHub">Star on GitHub Now</a>
+    </div>
+
+    <footer class="app-footer">
+        Made by <a href="https://sdad.pro" target="_blank">SDAD</a> with ❤️
+    </footer>
+
+    <!-- GitHub Button Script -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
 </body>
 </html>
