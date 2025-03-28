@@ -6,6 +6,10 @@
     <title>DeepSeek Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet">
     <style>
         :root {
             --primary: #6e40c9;
@@ -220,28 +224,142 @@
             color: var(--funky-accent);
         }
 
-        .message-content code {
-            background-color: rgba(0, 0, 0, 0.4);
+        /* Inline code */
+        .message-content code:not(pre code) {
+            background-color: rgba(0, 0, 0, 0.5);
             padding: 0.2em 0.4em;
             border-radius: 0.3em;
-            font-family: 'Courier New', monospace;
+            font-family: 'Fira Code', 'Courier New', monospace;
             font-size: 0.9em;
             color: #f8f8f2;
+            border: 1px solid var(--border-color);
         }
 
+        /* Code blocks - ChatGPT/DeepSeek style */
         .message-content pre {
-            background-color: rgba(0, 0, 0, 0.4);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            overflow-x: auto;
-            margin: 1em 0;
-            border-left: 3px solid var(--primary);
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 1rem 0 0;
+            margin: 1.25em 0;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .message-content pre code {
+            display: block;
+            padding: 0 1.5rem 1rem;
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #e0e0e0;
+            white-space: pre;
+            tab-size: 4;
+            overflow-x: auto;
+        }
+
+        /* Header bar with language and copy button */
+        .message-content pre::before {
+            content: '';
+            display: block;
+            height: 36px;
+            background: #252526;
+            margin-bottom: 1rem;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .message-content pre .code-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background: #252526;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .message-content pre .language-label {
+            color: #a1a1a1;
+            font-size: 0.8rem;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+        }
+
+        .message-content pre .copy-button {
             background: transparent;
-            padding: 0;
-            border-radius: 0;
+            border: none;
+            color: #a1a1a1;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .message-content pre .copy-button:hover {
+            background: rgba(255,255,255,0.1);
+            color: #e0e0e0;
+        }
+
+        /* Line numbers */
+        .message-content pre.line-numbers {
+            padding-left: 3.5rem;
+        }
+
+        .message-content pre.line-numbers code {
+            position: relative;
+            counter-reset: line;
+        }
+
+        .message-content pre.line-numbers code .line::before {
+            counter-increment: line;
+            content: counter(line);
+            display: inline-block;
+            width: 2.5rem;
+            margin-left: -3.5rem;
+            margin-right: 1rem;
+            color: #6e7681;
+            text-align: right;
+            user-select: none;
+        }
+
+        /* Add copy button for code blocks */
+        .message-content pre {
+            position: relative;
+        }
+
+        .message-content pre .copy-button {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 0.3rem;
+            padding: 0.3rem 0.6rem;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .message-content pre:hover .copy-button {
+            opacity: 1;
+        }
+
+        .message-content pre .copy-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .message-content pre .copy-button.copied {
+            background: var(--primary);
+            color: white;
         }
 
         .message-content ul,
@@ -894,8 +1012,20 @@
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'message-content';
                 
-                // Enhanced markdown parsing
-                let formattedContent = content
+                // Enhanced markdown parsing with better code block handling
+                let formattedContent = content;
+                
+                // Process code blocks first (with optional language specification)
+                formattedContent = formattedContent.replace(
+                    /```(\w*)\n([\s\S]*?)```/g, 
+                    (match, language, code) => {
+                        const langClass = language ? ` class="language-${language}"` : '';
+                        return `<pre><code${langClass}>${code.trim()}</code></pre>`;
+                    }
+                );
+                
+                // Then process other markdown elements
+                formattedContent = formattedContent
                     // Headers
                     .replace(/^# (.*$)/gm, '<h1>$1</h1>')
                     .replace(/^## (.*$)/gm, '<h2>$1</h2>')
@@ -903,9 +1033,8 @@
                     // Bold and italic
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                    // Code blocks
+                    // Inline code
                     .replace(/`([^`]+)`/g, '<code>$1</code>')
-                    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
                     // Lists
                     .replace(/^\s*\*\s(.*$)/gm, '<li>$1</li>')
                     .replace(/^\s*-\s(.*$)/gm, '<li>$1</li>')
@@ -930,6 +1059,31 @@
 
                 chatMessages.appendChild(messageDiv);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // Add copy buttons to all code blocks
+                messageDiv.querySelectorAll('pre').forEach(pre => {
+                    const copyButton = document.createElement('button');
+                    copyButton.className = 'copy-button';
+                    copyButton.innerHTML = '<i class="far fa-copy"></i>';
+                    copyButton.title = 'Copy code';
+                    
+                    copyButton.addEventListener('click', () => {
+                        const code = pre.querySelector('code').textContent;
+                        navigator.clipboard.writeText(code).then(() => {
+                            copyButton.innerHTML = '<i class="fas fa-check"></i>';
+                            copyButton.classList.add('copied');
+                            setTimeout(() => {
+                                copyButton.innerHTML = '<i class="far fa-copy"></i>';
+                                copyButton.classList.remove('copied');
+                            }, 2000);
+                        });
+                    });
+                    
+                    pre.appendChild(copyButton);
+                });
+
+            // Process code blocks with Prism.js after a small delay to allow DOM update
+            setTimeout(processCodeBlocks, 50);
             }
 
             // Function to show typing indicator
@@ -1031,5 +1185,77 @@
 
     <!-- GitHub Button Script -->
     <script async defer src="https://buttons.github.io/buttons.js"></script>
+    
+    <!-- Prism.js for syntax highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    
+    <script>
+        // Professional code block processing like ChatGPT/DeepSeek
+        function processCodeBlocks() {
+            document.querySelectorAll('pre code').forEach((block) => {
+                const pre = block.parentElement;
+                
+                // Create code header
+                const header = document.createElement('div');
+                header.className = 'code-header';
+                
+                // Detect language
+                let language = 'text';
+                const languageMatch = block.className.match(/language-(\w+)/);
+                if (languageMatch) {
+                    language = languageMatch[1];
+                } else {
+                    // Try to detect from first line
+                    const firstLine = block.textContent.split('\n')[0].trim();
+                    if (firstLine.match(/^(function|class|import|export)\s/)) language = 'javascript';
+                    else if (firstLine.match(/^(def|class)\s/)) language = 'python';
+                    else if (firstLine.match(/^(<\?php|<\?=|<\?)/)) language = 'php';
+                    else if (firstLine.match(/^#include/)) language = 'cpp';
+                    else if (firstLine.match(/^package\s/)) language = 'java';
+                }
+
+                // Add language label
+                const languageLabel = document.createElement('div');
+                languageLabel.className = 'language-label';
+                languageLabel.textContent = language;
+                header.appendChild(languageLabel);
+                
+                // Add copy button
+                const copyButton = document.createElement('button');
+                copyButton.className = 'copy-button';
+                copyButton.innerHTML = '<i class="far fa-copy"></i> Copy';
+                copyButton.addEventListener('click', () => {
+                    navigator.clipboard.writeText(block.textContent).then(() => {
+                        copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                        setTimeout(() => {
+                            copyButton.innerHTML = '<i class="far fa-copy"></i> Copy';
+                        }, 2000);
+                    });
+                });
+                header.appendChild(copyButton);
+                
+                pre.insertBefore(header, block);
+                
+                // Set language class for syntax highlighting
+                block.className = `language-${language}`;
+                
+                // Add line numbers wrapper
+                if (block.textContent.split('\n').length > 1) {
+                    pre.classList.add('line-numbers');
+                    const lines = block.innerHTML.split('\n');
+                    block.innerHTML = lines.map(line => 
+                        `<span class="line">${line || ' '}</span>`
+                    ).join('\n');
+                }
+            });
+            
+            // Apply syntax highlighting
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        }
+    </script>
 </body>
 </html>
